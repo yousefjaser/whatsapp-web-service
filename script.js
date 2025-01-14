@@ -256,4 +256,134 @@ document.addEventListener('DOMContentLoaded', () => {
     generateQRCode();
 });
 
+const socket = io();
+let isConnected = false;
+
+// UI Elements
+const qrContainer = document.getElementById('qr-code');
+const messageContainer = document.getElementById('message');
+const statusContainer = document.getElementById('status');
+const refreshButton = document.getElementById('refresh-qr');
+const sendMessageForm = document.getElementById('send-message-form');
+
+// Socket Events
+socket.on('qr', (qr) => {
+    console.log('Received QR Code');
+    qrContainer.innerHTML = `<img src="${qr}" alt="QR Code">`;
+    messageContainer.textContent = 'امسح رمز QR باستخدام تطبيق واتساب على هاتفك';
+    statusContainer.textContent = 'في انتظار المسح...';
+    refreshButton.style.display = 'block';
+});
+
+socket.on('ready', (msg) => {
+    console.log('WhatsApp is ready');
+    isConnected = true;
+    qrContainer.innerHTML = '';
+    messageContainer.textContent = msg;
+    statusContainer.textContent = 'متصل';
+    statusContainer.style.color = 'green';
+    refreshButton.style.display = 'none';
+    // تفعيل نموذج إرسال الرسائل
+    if (sendMessageForm) {
+        sendMessageForm.style.display = 'block';
+    }
+});
+
+socket.on('authenticated', (msg) => {
+    console.log('Authenticated');
+    isConnected = true;
+    qrContainer.innerHTML = '';
+    messageContainer.textContent = msg;
+    statusContainer.textContent = 'تم المصادقة';
+    statusContainer.style.color = 'green';
+    // تفعيل نموذج إرسال الرسائل
+    if (sendMessageForm) {
+        sendMessageForm.style.display = 'block';
+    }
+});
+
+socket.on('error', (msg) => {
+    console.error('Error:', msg);
+    messageContainer.textContent = msg;
+    statusContainer.textContent = 'حدث خطأ';
+    statusContainer.style.color = 'red';
+    refreshButton.style.display = 'block';
+});
+
+socket.on('disconnected', (msg) => {
+    console.log('Disconnected:', msg);
+    isConnected = false;
+    messageContainer.textContent = msg || 'تم قطع الاتصال';
+    statusContainer.textContent = 'غير متصل';
+    statusContainer.style.color = 'red';
+    refreshButton.style.display = 'block';
+    // تعطيل نموذج إرسال الرسائل
+    if (sendMessageForm) {
+        sendMessageForm.style.display = 'none';
+    }
+});
+
+// Refresh QR Code
+refreshButton.addEventListener('click', () => {
+    console.log('Requesting QR refresh');
+    qrContainer.innerHTML = 'جاري تحديث رمز QR...';
+    messageContainer.textContent = 'جاري التحديث...';
+    socket.emit('refresh');
+});
+
+// Send Message Form
+if (sendMessageForm) {
+    sendMessageForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const phone = document.getElementById('phone').value;
+        const countryCode = document.getElementById('countryCode').value;
+        const message = document.getElementById('message-text').value;
+        const fullPhone = countryCode + phone;
+        
+        try {
+            const response = await fetch('/api/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    phone: fullPhone,
+                    message: message
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                alert('تم إرسال الرسالة بنجاح');
+                document.getElementById('message-text').value = '';
+            } else {
+                alert('فشل في إرسال الرسالة: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            alert('حدث خطأ في إرسال الرسالة');
+        }
+    });
+}
+
+// Check initial connection status
+fetch('/api/status')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.status === 'connected') {
+            isConnected = true;
+            messageContainer.textContent = 'متصل بواتساب';
+            statusContainer.textContent = 'متصل';
+            statusContainer.style.color = 'green';
+            if (sendMessageForm) {
+                sendMessageForm.style.display = 'block';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error checking status:', error);
+    });
+
 window.onload = init;

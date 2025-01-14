@@ -1,44 +1,30 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html dir="rtl" lang="ar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واتساب ويب - WhatsApp Web</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>خدمة واتساب ويب</title>
+    <link rel="stylesheet" href="/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="qr">واتساب ويب</button>
-                <button class="tab-btn" data-tab="direct">إرسال رسالة مباشرة</button>
-            </div>
+        <h1>خدمة واتساب ويب</h1>
+        
+        <div class="status-container">
+            <span>الحالة: </span>
+            <span id="status">غير متصل</span>
+        </div>
 
-            <div class="tab-content" id="qr-tab">
-                <h1>واتساب ويب</h1>
-                <p class="subtitle">امسح رمز QR باستخدام هاتفك</p>
-                
-                <div class="qr-container">
-                    <div id="qr-code"></div>
-                    <div id="status-message"></div>
-                    <div class="qr-instructions">
-                        <ol>
-                            <li>افتح واتساب على هاتفك</li>
-                            <li>انقر على القائمة ⋮ أو الإعدادات ⚙️</li>
-                            <li>اختر "الأجهزة المتصلة"</li>
-                            <li>انقر على "ربط جهاز"</li>
-                            <li>وجه كاميرا هاتفك نحو رمز QR</li>
-                        </ol>
-                    </div>
-                </div>
-                <button id="refresh-qr">تحديث رمز QR</button>
-            </div>
+        <div id="qr-container">
+            <div id="qr-code"></div>
+            <p id="message">في انتظار رمز QR...</p>
+            <button id="refresh-qr" style="display: none;">تحديث رمز QR</button>
+        </div>
 
-            <div class="tab-content hidden" id="direct-tab">
-                <h1>إرسال رسالة مباشرة</h1>
-                <p class="subtitle">بدون حفظ الرقم في جهات الاتصال</p>
-                
+        <div id="send-message-form" style="display: none;">
+            <h2>إرسال رسالة</h2>
+            <form>
                 <div class="input-group">
                     <label for="countryCode">رمز الدولة</label>
                     <select id="countryCode">
@@ -76,23 +62,21 @@
                 </div>
 
                 <div class="input-group">
-                    <label for="phoneNumber">رقم الهاتف</label>
-                    <input type="tel" id="phoneNumber" placeholder="ادخل رقم الهاتف" dir="ltr">
+                    <label for="phone">رقم الهاتف</label>
+                    <input type="tel" id="phone" required placeholder="بدون رمز الدولة">
                 </div>
 
                 <div class="input-group">
-                    <label for="message">الرسالة (اختياري)</label>
-                    <textarea id="message" placeholder="اكتب رسالتك هنا..."></textarea>
+                    <label for="message-text">الرسالة</label>
+                    <textarea id="message-text" required></textarea>
                 </div>
 
-                <button id="sendButton">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
-                    ارسال رسالة واتساب
-                </button>
-            </div>
+                <button type="submit">إرسال</button>
+            </form>
         </div>
     </div>
+
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script src="/script.js"></script>
 </body>
 </html>

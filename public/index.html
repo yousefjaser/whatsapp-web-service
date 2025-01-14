@@ -3,76 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خدمة واتساب ويب</title>
+    <title>واتساب ويب - WhatsApp Web</title>
     <link rel="stylesheet" href="/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <h1>خدمة واتساب ويب</h1>
-        
-        <div class="status-container">
-            <span>الحالة: </span>
-            <span id="status">غير متصل</span>
-        </div>
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="qr">واتساب ويب</button>
+                <button class="tab-btn" data-tab="direct">إرسال رسالة مباشرة</button>
+            </div>
 
-        <div id="qr-container">
-            <div id="qr-code"></div>
-            <p id="message">في انتظار رمز QR...</p>
-            <button id="refresh-qr" style="display: none;">تحديث رمز QR</button>
-        </div>
+            <div class="status-container">
+                <span>الحالة: </span>
+                <span id="status">غير متصل</span>
+            </div>
 
-        <div id="send-message-form" style="display: none;">
-            <h2>إرسال رسالة</h2>
-            <form>
-                <div class="input-group">
-                    <label for="countryCode">رمز الدولة</label>
-                    <select id="countryCode">
-                        <option value="970">فلسطين (+970)</option>
-                        <option value="972">إسرائيل (+972)</option>
-                        <option value="20">مصر (+20)</option>
-                        <option value="962">الأردن (+962)</option>
-                        <option value="966">السعودية (+966)</option>
-                        <option value="971">الإمارات (+971)</option>
-                        <option value="974">قطر (+974)</option>
-                        <option value="973">البحرين (+973)</option>
-                        <option value="968">عمان (+968)</option>
-                        <option value="965">الكويت (+965)</option>
-                        <option value="961">لبنان (+961)</option>
-                        <option value="963">سوريا (+963)</option>
-                        <option value="964">العراق (+964)</option>
-                        <option value="967">اليمن (+967)</option>
-                        <option value="213">الجزائر (+213)</option>
-                        <option value="216">تونس (+216)</option>
-                        <option value="218">ليبيا (+218)</option>
-                        <option value="212">المغرب (+212)</option>
-                        <option value="249">السودان (+249)</option>
-                        <option value="252">الصومال (+252)</option>
-                        <option value="253">جيبوتي (+253)</option>
-                        <option value="222">موريتانيا (+222)</option>
-                        <option value="90">تركيا (+90)</option>
-                        <option value="98">إيران (+98)</option>
-                        <option value="92">باكستان (+92)</option>
-                        <option value="91">الهند (+91)</option>
-                        <option value="1">الولايات المتحدة وكندا (+1)</option>
-                        <option value="44">المملكة المتحدة (+44)</option>
-                        <option value="33">فرنسا (+33)</option>
-                        <option value="49">ألمانيا (+49)</option>
-                    </select>
+            <div class="tab-content active" id="qr-tab">
+                <h2>واتساب ويب</h2>
+                <p id="message" class="subtitle">امسح رمز QR باستخدام هاتفك</p>
+                
+                <div class="qr-container">
+                    <div id="qr-code"></div>
+                    <div class="qr-instructions">
+                        <ol>
+                            <li>افتح واتساب على هاتفك</li>
+                            <li>انقر على القائمة ⋮ أو الإعدادات ⚙️</li>
+                            <li>اختر "الأجهزة المتصلة"</li>
+                            <li>انقر على "ربط جهاز"</li>
+                            <li>وجه كاميرا هاتفك نحو رمز QR</li>
+                        </ol>
+                    </div>
                 </div>
+                <button id="refresh-qr" class="action-button">تحديث رمز QR</button>
+            </div>
 
-                <div class="input-group">
-                    <label for="phone">رقم الهاتف</label>
-                    <input type="tel" id="phone" required placeholder="بدون رمز الدولة">
-                </div>
+            <div class="tab-content" id="direct-tab">
+                <h2>إرسال رسالة مباشرة</h2>
+                <p class="subtitle">بدون حفظ الرقم في جهات الاتصال</p>
+                
+                <form id="send-message-form">
+                    <div class="input-group">
+                        <label for="countryCode">رمز الدولة</label>
+                        <select id="countryCode">
+                            <option value="970">فلسطين (+970)</option>
+                            <option value="972">إسرائيل (+972)</option>
+                            <option value="20">مصر (+20)</option>
+                            <option value="962">الأردن (+962)</option>
+                            <option value="966">السعودية (+966)</option>
+                            <option value="971">الإمارات (+971)</option>
+                            <option value="974">قطر (+974)</option>
+                            <option value="973">البحرين (+973)</option>
+                            <option value="968">عمان (+968)</option>
+                            <option value="965">الكويت (+965)</option>
+                            <option value="961">لبنان (+961)</option>
+                            <option value="963">سوريا (+963)</option>
+                            <option value="964">العراق (+964)</option>
+                            <option value="967">اليمن (+967)</option>
+                        </select>
+                    </div>
 
-                <div class="input-group">
-                    <label for="message-text">الرسالة</label>
-                    <textarea id="message-text" required></textarea>
-                </div>
+                    <div class="input-group">
+                        <label for="phone">رقم الهاتف</label>
+                        <input type="tel" id="phone" required placeholder="بدون رمز الدولة" dir="ltr">
+                    </div>
 
-                <button type="submit">إرسال</button>
-            </form>
+                    <div class="input-group">
+                        <label for="message-text">الرسالة (اختياري)</label>
+                        <textarea id="message-text" placeholder="اكتب رسالتك هنا..."></textarea>
+                    </div>
+
+                    <button type="submit" class="action-button whatsapp-button">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
+                        إرسال رسالة واتساب
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 

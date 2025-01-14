@@ -264,7 +264,22 @@ const qrContainer = document.getElementById('qr-code');
 const messageContainer = document.getElementById('message');
 const statusContainer = document.getElementById('status');
 const refreshButton = document.getElementById('refresh-qr');
-const sendMessageForm = document.getElementById('send-message-form');
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+// Tab Switching
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const tab = button.dataset.tab;
+        
+        // Update active states
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        button.classList.add('active');
+        document.getElementById(`${tab}-tab`).classList.add('active');
+    });
+});
 
 // Socket Events
 socket.on('qr', (qr) => {
@@ -272,66 +287,56 @@ socket.on('qr', (qr) => {
     qrContainer.innerHTML = `<img src="${qr}" alt="QR Code">`;
     messageContainer.textContent = 'امسح رمز QR باستخدام تطبيق واتساب على هاتفك';
     statusContainer.textContent = 'في انتظار المسح...';
+    statusContainer.style.color = '#666';
     refreshButton.style.display = 'block';
 });
 
-socket.on('ready', (msg) => {
+socket.on('ready', () => {
     console.log('WhatsApp is ready');
     isConnected = true;
-    qrContainer.innerHTML = '';
-    messageContainer.textContent = msg;
+    qrContainer.innerHTML = '<div class="success-message">✓ تم الاتصال بنجاح!</div>';
+    messageContainer.textContent = 'تم الاتصال بواتساب';
     statusContainer.textContent = 'متصل';
-    statusContainer.style.color = 'green';
+    statusContainer.style.color = '#25D366';
     refreshButton.style.display = 'none';
-    // تفعيل نموذج إرسال الرسائل
-    if (sendMessageForm) {
-        sendMessageForm.style.display = 'block';
-    }
 });
 
-socket.on('authenticated', (msg) => {
+socket.on('authenticated', () => {
     console.log('Authenticated');
     isConnected = true;
-    qrContainer.innerHTML = '';
-    messageContainer.textContent = msg;
-    statusContainer.textContent = 'تم المصادقة';
-    statusContainer.style.color = 'green';
-    // تفعيل نموذج إرسال الرسائل
-    if (sendMessageForm) {
-        sendMessageForm.style.display = 'block';
-    }
+    qrContainer.innerHTML = '<div class="success-message">✓ تم المصادقة بنجاح!</div>';
+    messageContainer.textContent = 'تم المصادقة بنجاح';
+    statusContainer.textContent = 'متصل';
+    statusContainer.style.color = '#25D366';
 });
 
-socket.on('error', (msg) => {
-    console.error('Error:', msg);
-    messageContainer.textContent = msg;
+socket.on('error', (error) => {
+    console.error('Error:', error);
+    messageContainer.textContent = `خطأ: ${error}`;
     statusContainer.textContent = 'حدث خطأ';
-    statusContainer.style.color = 'red';
+    statusContainer.style.color = '#dc3545';
     refreshButton.style.display = 'block';
 });
 
-socket.on('disconnected', (msg) => {
-    console.log('Disconnected:', msg);
+socket.on('disconnected', () => {
+    console.log('Disconnected');
     isConnected = false;
-    messageContainer.textContent = msg || 'تم قطع الاتصال';
+    messageContainer.textContent = 'تم قطع الاتصال';
     statusContainer.textContent = 'غير متصل';
-    statusContainer.style.color = 'red';
+    statusContainer.style.color = '#dc3545';
     refreshButton.style.display = 'block';
-    // تعطيل نموذج إرسال الرسائل
-    if (sendMessageForm) {
-        sendMessageForm.style.display = 'none';
-    }
 });
 
 // Refresh QR Code
 refreshButton.addEventListener('click', () => {
     console.log('Requesting QR refresh');
-    qrContainer.innerHTML = 'جاري تحديث رمز QR...';
+    qrContainer.innerHTML = '<div class="loading">جاري تحديث رمز QR...</div>';
     messageContainer.textContent = 'جاري التحديث...';
     socket.emit('refresh');
 });
 
 // Send Message Form
+const sendMessageForm = document.getElementById('send-message-form');
 if (sendMessageForm) {
     sendMessageForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -374,12 +379,10 @@ fetch('/api/status')
     .then(data => {
         if (data.success && data.status === 'connected') {
             isConnected = true;
+            qrContainer.innerHTML = '<div class="success-message">✓ متصل بواتساب</div>';
             messageContainer.textContent = 'متصل بواتساب';
             statusContainer.textContent = 'متصل';
-            statusContainer.style.color = 'green';
-            if (sendMessageForm) {
-                sendMessageForm.style.display = 'block';
-            }
+            statusContainer.style.color = '#25D366';
         }
     })
     .catch(error => {

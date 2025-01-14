@@ -11,9 +11,9 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 // إنشاء مجلد لحفظ بيانات الجلسة
-const sessionDir = path.join(__dirname, '.wwebjs_auth');
-if (!fs.existsSync(sessionDir)){
-    fs.mkdirSync(sessionDir, { recursive: true });
+const SESSION_DIR = path.join(__dirname, '.wwebjs_auth');
+if (!fs.existsSync(SESSION_DIR)){
+    fs.mkdirSync(SESSION_DIR, { recursive: true });
 }
 
 // إعداد المجلدات الثابتة
@@ -25,12 +25,13 @@ app.get('/', (req, res) => {
 });
 
 let client = null;
+let qrCodeData = null;
 
 function createClient() {
     return new Client({
         authStrategy: new LocalAuth({
             clientId: "whatsapp-web-client",
-            dataPath: sessionDir
+            dataPath: SESSION_DIR
         }),
         puppeteer: {
             headless: true,
@@ -38,113 +39,108 @@ function createClient() {
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
+                '--disable-gpu',
+                '--disable-software-rasterizer',
+                '--disable-dev-shm-usage',
                 '--no-first-run',
-                '--disable-gpu'
-            ]
+                '--no-zygote',
+                '--single-process',
+                '--disable-web-security'
+            ],
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
         },
-        restartOnAuthFail: true
+        restartOnAuthFail: true,
+        takeoverOnConflict: true,
+        takeoverTimeoutMs: 0
     });
 }
 
-// معالجة الاتصال بـ Socket.IO
+async function initializeClient() {
+    try {
+        if (!client) {
+            client = createClient();
+
+            client.on('qr', async (qr) => {
+                try {
+                    console.log('تم إنشاء رمز QR جديد');
+                    qrCodeData = await qrcode.toDataURL(qr);
+                    io.emit('qr', qrCodeData);
+                } catch (err) {
+                    console.error('خطأ في إنشاء رمز QR:', err);
+                }
+            });
+
+            client.on('ready', () => {
+                console.log('تم الاتصال بواتساب بنجاح');
+                qrCodeData = null;
+                io.emit('ready', 'تم الاتصال بواتساب بنجاح!');
+            });
+
+            client.on('authenticated', () => {
+                console.log('تم المصادقة وحفظ الجلسة');
+                qrCodeData = null;
+                io.emit('authenticated', 'تم حفظ بيانات الجلسة بنجاح!');
+            });
+
+            client.on('auth_failure', (msg) => {
+                console.error('فشل في المصادقة:', msg);
+                io.emit('error', 'فشل في المصادقة');
+            });
+
+            client.on('disconnected', async (reason) => {
+                console.log('تم قطع الاتصال:', reason);
+                if (client) {
+                    try {
+                        await client.destroy();
+                    } catch (error) {
+                        console.error('خطأ في تدمير العميل:', error);
+                    }
+                }
+                client = null;
+                // محاولة إعادة الاتصال تلقائياً
+                setTimeout(() => {
+                    initializeClient();
+                }, 5000);
+            });
+
+            await client.initialize();
+        }
+    } catch (error) {
+        console.error('خطأ في التهيئة:', error);
+        client = null;
+        // محاولة إعادة التهيئة بعد فترة
+        setTimeout(() => {
+            initializeClient();
+        }, 5000);
+    }
+}
+
+// بدء تشغيل العميل عند بدء الخادم
+initializeClient();
+
 io.on('connection', (socket) => {
     console.log('مستخدم جديد متصل');
 
-    if (!client) {
-        client = createClient();
-
-        client.on('qr', async (qr) => {
-            try {
-                console.log('تم إنشاء رمز QR جديد');
-                const qrImage = await qrcode.toDataURL(qr);
-                io.emit('qr', qrImage);
-            } catch (err) {
-                console.error('خطأ في إنشاء رمز QR:', err);
-            }
-        });
-
-        client.on('ready', () => {
-            console.log('تم الاتصال بواتساب بنجاح');
-            io.emit('ready', 'تم الاتصال بواتساب بنجاح!');
-        });
-
-        client.on('authenticated', (session) => {
-            console.log('تم المصادقة وحفظ الجلسة');
-            io.emit('authenticated', 'تم حفظ بيانات الجلسة بنجاح!');
-        });
-
-        client.on('auth_failure', (msg) => {
-            console.error('فشل في المصادقة:', msg);
-            io.emit('error', 'فشل في المصادقة');
-        });
-
-        client.on('disconnected', async (reason) => {
-            console.log('تم قطع الاتصال:', reason);
-            if (client) {
-                try {
-                    await client.destroy();
-                } catch (error) {
-                    console.error('خطأ في تدمير العميل:', error);
-                }
-            }
-            client = null;
-            io.emit('error', 'تم قطع الاتصال. يرجى إعادة المحاولة');
-        });
-
-        try {
-            console.log('جاري بدء الاتصال...');
-            client.initialize().catch(err => {
-                console.error('خطأ في التهيئة:', err);
-                client = null;
-            });
-        } catch (error) {
-            console.error('خطأ في التهيئة:', error);
-            client = null;
-        }
-    } else {
-        // إذا كان العميل موجوداً ومتصلاً، أرسل حالة "جاهز" مباشرة
-        if (client.info) {
-            socket.emit('ready', 'تم الاتصال بواتساب بنجاح!');
-        }
+    // إرسال رمز QR الحالي إذا كان موجوداً
+    if (qrCodeData) {
+        socket.emit('qr', qrCodeData);
+    } else if (client && client.info) {
+        socket.emit('ready', 'تم الاتصال بواتساب بنجاح!');
     }
 
-    // إعادة تحميل رمز QR
     socket.on('refresh', async () => {
         try {
             console.log('جاري إعادة تحميل الاتصال...');
             if (client) {
                 await client.destroy();
             }
-            client = createClient();
-            await client.initialize();
+            client = null;
+            await initializeClient();
         } catch (error) {
             console.error('خطأ في إعادة التحميل:', error);
             socket.emit('error', 'حدث خطأ في إعادة التحميل');
         }
     });
-});
-
-// معالجة الرسائل المباشرة
-app.post('/send-message', async (req, res) => {
-    const { phone, message } = req.body;
-    
-    if (!client || !client.info) {
-        return res.status(403).json({ 
-            success: false, 
-            message: 'الرجاء الاتصال بواتساب أولاً' 
-        });
-    }
-    
-    try {
-        const formattedNumber = phone.replace(/\D/g, '');
-        const chat = await client.getChatById(formattedNumber + '@c.us');
-        await chat.sendMessage(message);
-        res.json({ success: true, message: 'تم إرسال الرسالة بنجاح' });
-    } catch (error) {
-        console.error('خطأ في إرسال الرسالة:', error);
-        res.status(500).json({ success: false, message: 'حدث خطأ في إرسال الرسالة' });
-    }
 });
 
 // API Endpoints
@@ -166,28 +162,6 @@ app.post('/api/send-message', async (req, res) => {
     } catch (error) {
         console.error('Error sending message:', error);
         res.status(500).json({ success: false, message: 'Error sending message' });
-    }
-});
-
-app.post('/api/send-file', async (req, res) => {
-    const { phone, fileUrl, caption } = req.body;
-    
-    if (!client || !client.info) {
-        return res.status(403).json({ 
-            success: false, 
-            message: 'WhatsApp client is not ready' 
-        });
-    }
-    
-    try {
-        const formattedNumber = phone.replace(/\D/g, '');
-        const chat = await client.getChatById(formattedNumber + '@c.us');
-        const media = await MessageMedia.fromUrl(fileUrl);
-        await chat.sendMessage(media, { caption: caption });
-        res.json({ success: true, message: 'File sent successfully' });
-    } catch (error) {
-        console.error('Error sending file:', error);
-        res.status(500).json({ success: false, message: 'Error sending file' });
     }
 });
 
